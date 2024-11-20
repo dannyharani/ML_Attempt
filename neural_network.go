@@ -36,7 +36,7 @@ func activation_function_derivative(x float64) float64 {
 	return activation * (1 - activation)
 }
 
-func calculate_outputs(layer Layer, inputs []float64) (outputs []float64) {
+func (layer Layer) calculate_outputs(inputs []float64) (outputs []float64) {
 
 	for layer_node_i := range layer.layer_nodes {
 		sum := layer.biases[layer_node_i]
@@ -61,15 +61,15 @@ func create_neural_network(layer_sizes []int) (nn Neural_Network) {
 	return
 }
 
-func forward_propogate(nn Neural_Network, inputs []float64) (outputs []float64) {
+func (nn Neural_Network) forward_propogate(inputs []float64) (outputs []float64) {
 	outputs = inputs
 	for _, layer := range nn.layers {
-		outputs = calculate_outputs(layer, outputs)
+		outputs = layer.calculate_outputs(outputs)
 	}
 	return
 }
 
-func apply_gradient_descent(layer Layer, learn_rate float64) {
+func (layer Layer) apply_gradient_descent(learn_rate float64) {
 	for node_i := range layer.layer_nodes {
 		layer.biases[node_i] -= layer.biases_cost_gradient[node_i] * learn_rate
 		for incoming_node := range layer.incoming_nodes {
@@ -87,11 +87,11 @@ func loss_derivative(actual float64, expected float64) float64 {
 	return 2 * (actual - expected)
 }
 
-func network_loss(nn Neural_Network, training_set Training_Set) float64 {
+func (nn Neural_Network) network_loss(training_set Training_Set) float64 {
 	var cost float64
 
 	for i := range len(training_set) {
-		output := forward_propogate(nn, training_set[i].input)
+		output := nn.forward_propogate(training_set[i].input)
 		for j := range len(output) {
 			cost += loss(output[j], training_set[i].expected[j])
 		}
