@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/rand/v2"
 )
 
 type Point struct {
@@ -56,17 +57,17 @@ func (layer Layer) calculate_outputs(inputs []float64) (outputs []float64) {
 	for layer_node_i := range layer.layer_nodes {
 		sum := layer.biases[layer_node_i]
 
-		for incoming_node := range layer.incoming_nodes {
+		for incoming_node := range layer.incoming_nodes - 1 {
 			sum += inputs[incoming_node] * layer.weights[incoming_node][layer_node_i]
 		}
-
 		outputs = append(outputs, activation_function(sum))
 	}
 	return
 }
 
 func (layer Layer) calculate_outputs_and_store_info(inputs []float64, learn_store Layer_Data) (outputs []float64) {
-	learn_store.inputs = inputs
+
+	copy(learn_store.inputs, inputs)
 
 	for layer_node_i := range layer.layer_nodes {
 		sum := layer.biases[layer_node_i]
@@ -78,18 +79,55 @@ func (layer Layer) calculate_outputs_and_store_info(inputs []float64, learn_stor
 		learn_store.weighted_inputs[layer_node_i] = sum
 		outputs = append(outputs, activation_function(sum))
 	}
-	learn_store.activated_inputs = outputs
+
+	copy(learn_store.activated_inputs, outputs)
+
 	return
 }
 
 func create_neural_network(layer_sizes []int) (nn Neural_Network) {
-	for i := range len(layer_sizes) - 1 {
+	for i := range len(layer_sizes) - 2 {
 		var hidden_layer Layer
 		hidden_layer.incoming_nodes = layer_sizes[i]
 		hidden_layer.layer_nodes = layer_sizes[i+1]
 
+		hidden_layer.weights = make([][]float64, hidden_layer.incoming_nodes)
+		for j := range hidden_layer.incoming_nodes {
+			hidden_layer.weights[j] = make([]float64, hidden_layer.layer_nodes)
+		}
+
+		hidden_layer.biases = make([]float64, hidden_layer.layer_nodes)
+
+		hidden_layer.weight_cost_gradient = make([][]float64, hidden_layer.incoming_nodes)
+		for j := range hidden_layer.incoming_nodes {
+			hidden_layer.weight_cost_gradient[j] = make([]float64, hidden_layer.layer_nodes)
+		}
+
+		hidden_layer.biases_cost_gradient = make([]float64, hidden_layer.layer_nodes)
+
 		nn.layers = append(nn.layers, hidden_layer)
 	}
+
+	output_layer := Layer{
+		incoming_nodes: layer_sizes[len(layer_sizes)-2],
+		layer_nodes:    layer_sizes[len(layer_sizes)-1],
+
+		weights: make([][]float64, layer_sizes[len(layer_sizes)-2]),
+		biases:  make([]float64, layer_sizes[len(layer_sizes)-1]),
+
+		weight_cost_gradient: make([][]float64, layer_sizes[len(layer_sizes)-2]),
+		biases_cost_gradient: make([]float64, layer_sizes[len(layer_sizes)-1]),
+	}
+
+	for i := range output_layer.incoming_nodes {
+		output_layer.weights[i] = make([]float64, output_layer.layer_nodes)
+	}
+
+	for i := range output_layer.incoming_nodes {
+		output_layer.weight_cost_gradient[i] = make([]float64, output_layer.layer_nodes)
+	}
+
+	nn.layers = append(nn.layers, output_layer)
 	return
 }
 
@@ -118,15 +156,15 @@ func calculate_partial_derivative_of_output_nodes(layer_data Layer_Data, expecte
 	}
 }
 
-func (layer Layer) calculate_partial_derivative_of_hidden_nodes(layer_data Layer_Data, old_layer Layer, old_node_values []float64) {
-	for new_node_i := range layer.layer_nodes {
-		var new_node_val float64 = 0
-		for old_node_i := range old_node_values {
-			weighted_input_d := old_layer.weights[new_node_i][old_node_i] // ????
-			new_node_val += weighted_input_d * old_node_values[old_node_i]
+func (layer Layer) calculate_partial_derivative_of_hidden_nodes(layer_data Layer_Data, next_layer Layer, next_node_values []float64) {
+	for node_i := range layer.layer_nodes {
+		var node_val float64 = 0
+		for next_node_i := range next_layer.layer_nodes {
+			weighted_input_d := next_layer.weights[node_i][next_node_i]
+			node_val += weighted_input_d * next_node_values[next_node_i]
 		}
-		new_node_val *= activation_function_derivative(layer_data.weighted_inputs[new_node_i])
-		layer_data.layer_node_value[new_node_i] = new_node_val
+		node_val *= activation_function_derivative(layer_data.weighted_inputs[node_i])
+		layer_data.layer_node_value[node_i] = node_val
 	}
 }
 
@@ -150,7 +188,7 @@ func (nn Neural_Network) network_loss(training_set Training_Set) float64 {
 
 	for i := range len(training_set) {
 		output := nn.forward_propogate(training_set[i].input)
-		for j := range len(output) - 1 {
+		for j := range len(output) {
 			cost += loss(output[j], training_set[i].expected[j])
 		}
 	}
@@ -159,29 +197,56 @@ func (nn Neural_Network) network_loss(training_set Training_Set) float64 {
 }
 
 func main() {
-	layer_szs := [...]int{1}
+	layer_szs := [...]int{2, 2}
 	var nn Neural_Network = create_neural_network(layer_szs[:])
 
 	training_set := Training_Set{
 		Point{
 			input:    []float64{0, 0},
-			expected: []float64{0},
+			expected: []float64{0, 0},
 		},
 		Point{
 			input:    []float64{0, 1},
-			expected: []float64{1},
+			expected: []float64{0, 1},
 		},
 		Point{
 			input:    []float64{1, 0},
-			expected: []float64{1},
+			expected: []float64{1, 0},
 		},
 		Point{
 			input:    []float64{1, 1},
-			expected: []float64{1},
+			expected: []float64{1, 1},
 		},
 	}
 
-	for i := range 200 {
-		fmt.Printf("(%d) -> cost: %f\n", i, nn.network_loss(training_set))
+	layer_data := []Layer_Data{
+		{
+			inputs:           make([]float64, nn.layers[0].incoming_nodes),
+			weighted_inputs:  make([]float64, nn.layers[0].layer_nodes),
+			activated_inputs: make([]float64, nn.layers[0].layer_nodes),
+			layer_node_value: make([]float64, nn.layers[0].layer_nodes),
+		},
+	}
+
+	for layer_i, layer := range nn.layers {
+
+		for i := range layer.incoming_nodes {
+			for j := range layer.layer_nodes {
+				nn.layers[layer_i].weights[i][j] = rand.Float64()
+			}
+		}
+
+		for i := range layer.layer_nodes {
+			nn.layers[layer_i].biases[i] = rand.Float64()
+		}
+	}
+
+	nn.layers[0].calculate_outputs_and_store_info(training_set[0].input, layer_data[0])
+	calculate_partial_derivative_of_output_nodes(layer_data[0], training_set[0].expected)
+	for range 100 {
+		nn.layers[0].calculate_partial_derivative_of_hidden_nodes(layer_data[0], nn.layers[0], layer_data[0].layer_node_value)
+		nn.layers[0].update_gradient(layer_data[0])
+		nn.layers[0].apply_gradient(0.2)
+		fmt.Println("Cost: ", nn.network_loss(training_set))
 	}
 }
