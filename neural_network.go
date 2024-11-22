@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"math"
-	"math/rand/v2"
 )
 
 type Point struct {
@@ -196,57 +194,57 @@ func (nn Neural_Network) network_loss(training_set Training_Set) float64 {
 	return cost / float64(len(training_set))
 }
 
-func main() {
-	layer_szs := [...]int{2, 2}
-	var nn Neural_Network = create_neural_network(layer_szs[:])
+// func main() {
+// 	layer_szs := [...]int{2, 2}
+// 	var nn Neural_Network = create_neural_network(layer_szs[:])
 
-	training_set := Training_Set{
-		Point{
-			input:    []float64{0, 0},
-			expected: []float64{0, 0},
-		},
-		Point{
-			input:    []float64{0, 1},
-			expected: []float64{0, 1},
-		},
-		Point{
-			input:    []float64{1, 0},
-			expected: []float64{1, 0},
-		},
-		Point{
-			input:    []float64{1, 1},
-			expected: []float64{1, 1},
-		},
-	}
+// 	training_set := Training_Set{
+// 		Point{
+// 			input:    []float64{0, 0},
+// 			expected: []float64{0, 0},
+// 		},
+// 		Point{
+// 			input:    []float64{0, 1},
+// 			expected: []float64{0, 1},
+// 		},
+// 		Point{
+// 			input:    []float64{1, 0},
+// 			expected: []float64{1, 0},
+// 		},
+// 		Point{
+// 			input:    []float64{1, 1},
+// 			expected: []float64{1, 1},
+// 		},
+// 	}
 
-	layer_data := []Layer_Data{
-		{
-			inputs:           make([]float64, nn.layers[0].incoming_nodes),
-			weighted_inputs:  make([]float64, nn.layers[0].layer_nodes),
-			activated_inputs: make([]float64, nn.layers[0].layer_nodes),
-			layer_node_value: make([]float64, nn.layers[0].layer_nodes),
-		},
-	}
+// 	layer_data := []Layer_Data{
+// 		{
+// 			inputs:           make([]float64, nn.layers[0].incoming_nodes),
+// 			weighted_inputs:  make([]float64, nn.layers[0].layer_nodes),
+// 			activated_inputs: make([]float64, nn.layers[0].layer_nodes),
+// 			layer_node_value: make([]float64, nn.layers[0].layer_nodes),
+// 		},
+// 	}
 
-	for layer_i, layer := range nn.layers {
+// 	for layer_i, layer := range nn.layers {
 
-		for i := range layer.incoming_nodes {
-			for j := range layer.layer_nodes {
-				nn.layers[layer_i].weights[i][j] = rand.Float64()
-			}
-		}
+// 		for i := range layer.incoming_nodes {
+// 			for j := range layer.layer_nodes {
+// 				nn.layers[layer_i].weights[i][j] = rand.Float64()
+// 			}
+// 		}
 
-		for i := range layer.layer_nodes {
-			nn.layers[layer_i].biases[i] = rand.Float64()
-		}
-	}
+// 		for i := range layer.layer_nodes {
+// 			nn.layers[layer_i].biases[i] = rand.Float64()
+// 		}
+// 	}
 
-	nn.layers[0].calculate_outputs_and_store_info(training_set[0].input, layer_data[0])
-	calculate_partial_derivative_of_output_nodes(layer_data[0], training_set[0].expected)
-	for range 100 {
-		nn.layers[0].calculate_partial_derivative_of_hidden_nodes(layer_data[0], nn.layers[0], layer_data[0].layer_node_value)
-		nn.layers[0].update_gradient(layer_data[0])
-		nn.layers[0].apply_gradient(0.2)
-		fmt.Println("Cost: ", nn.network_loss(training_set))
-	}
-}
+// 	nn.layers[0].calculate_outputs_and_store_info(training_set[0].input, layer_data[0])
+// 	calculate_partial_derivative_of_output_nodes(layer_data[0], training_set[0].expected)
+// 	for range 100 {
+// 		nn.layers[0].calculate_partial_derivative_of_hidden_nodes(layer_data[0], nn.layers[0], layer_data[0].layer_node_value)
+// 		nn.layers[0].update_gradient(layer_data[0])
+// 		nn.layers[0].apply_gradient(0.2)
+// 		fmt.Println("Cost: ", nn.network_loss(training_set))
+// 	}
+// }
